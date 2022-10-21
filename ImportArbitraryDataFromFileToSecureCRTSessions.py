@@ -413,22 +413,21 @@ def ValidateFieldDesignations(strFields):
 
     for strField in g_vFieldsArray:
         #MsgBox("{0}\nHas 'protocol': {1}\nHas '=': {2}".format(strField, strField.find("protocol"), strField.find("=")))
-        if strField.lower().find("protocol") > -1 and \
-           strField.lower().find("=") > -1:
-                g_strDefaultProtocol = strField.split("=")[1].upper()
-                #MsgBox(("Found a default protocol spec: {0}".format(g_strDefaultProtocol)))
-                # Fix the protocol field since we know the default protocol
-                # value
-                strFields = strFields.replace(strField, "protocol")
-        if strField.lower().find("folder") > -1 and \
-            strField.lower().find("=") > -1:
-                g_strDefaultFolder = strField.split("=")[1]
-                strFields = strFields.replace(strField, "folder")
+        if strField.lower().find("protocol") > -1 and strField.lower().find("=") > -1:
+            g_strDefaultProtocol = strField.split("=")[1].upper()
+            #MsgBox(("Found a default protocol spec: {0}".format(g_strDefaultProtocol)))
+            # Fix the protocol field since we know the default protocol
+            # value
+            strFields = strFields.replace(strField, "protocol")
+        if strField.lower().find("folder") > -1 and strField.lower().find("=") > -1:
+            g_strDefaultFolder = strField.split("=")[1]
+            if g_strDefaultFolder.lower().find("_ts") > -1:
+                g_strDefaultFolder = g_strDefaultFolder.replace("_ts", datetime.datetime.now().strftime("%Y-%m-%d %H-%M")[:16])
+            strFields = strFields.replace(strField, "folder")
 
-        if strField.lower().find("username") > -1 and \
-            strField.lower().find("=") > -1:
-                g_strDefaultUsername = strField.split("=")[1]
-                strFields = strFields.replace(strField, "username")
+        if strField.lower().find("username") > -1 and strField.lower().find("=") > -1:
+            g_strDefaultUsername = strField.split("=")[1]
+            strFields = strFields.replace(strField, "username")
 
 
     g_vFieldsArray = strFields.split(g_strDelimiter)
@@ -439,11 +438,12 @@ def SessionExists(strSessionPath):
     # Returns True if a session specified as value for strSessionPath already
     # exists within the SecureCRT configuration.
     # Returns False otherwise.
-    try:
-        objTosserConfig = crt.OpenSessionConfiguration(strSessionPath)
-        return True
-    except Exception as objInst:
-        return False
+    return False
+    # try:
+    #     objTosserConfig = crt.OpenSessionConfiguration(strSessionPath)
+    #     return True
+    # except Exception as objInst:
+    #     return False
 
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -537,12 +537,12 @@ def ValidateSessionFolderComponent(strComponent, strType):
             return False
 
     return True
-    
+
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 def ValidateProtocolComponent(strProtocol):
     global g_nMaintVersion, g_nCurLineNumber, g_strLine, g_strErrors
     global g_strBogusLinesNotImported
-    
+
     bReturnValue = True
     strErrorText = ""
     if "rdp" in strProtocol.lower():
@@ -552,7 +552,7 @@ def ValidateProtocolComponent(strProtocol):
         elif not sys.platform == "win32":
             strErrorText = "Error: RDP protocol support is only available in SecureCRT for Windows."
             bReturnValue = False
-        
+
         if bReturnValue == False:
             if g_strErrors != "":
                 g_strErrors = "\r\n{0}".format(g_strErrors)
@@ -565,7 +565,7 @@ def ValidateProtocolComponent(strProtocol):
             g_strBogusLinesNotImported = "{}\r\n{}".format(
                 g_strBogusLinesNotImported,
                 g_strLine)
-        
+
     return bReturnValue
 
 
@@ -586,28 +586,29 @@ def Import():
     if g_strHostsFile == "":
         return
 
-    nReturn = MsgBox(
-        "For new sessions created by this script...\r\n\r\n" +
-            "Use settings from the \"Default\" session?\r\n" +
-            "\tOr...\r\n" +
-            "Use this script's customized options?\r\n" +
-            "   (see lines 836-880 in the script code for options & values)" +
-            "\r\n" +
-            "__________________________________________________\r\n" +
-            "\r\n" +
-            "Yes:\tUse \"Default\" Session options.\r\n" +
-            "No:\tUse custom options defined in this script." +
-            "\r\n" +
-            "Cancel:\tExit script; let me read/modify the " +
-            "code before I decide.",
-        "Use \"Default\" Session options for imported sessions?",
-        3)
-    if nReturn == 6:      # Yes:
-        g_bUseDefaultSessionOptions = True
-    elif nReturn == 7:    # No:
-        g_bUseDefaultSessionOptions = False
-    elif nReturn == 2:    # Cancel:
+    # nReturn = MsgBox(
+    #     "For new sessions created by this script...\r\n\r\n" +
+    #         "Use settings from the \"Default\" session?\r\n" +
+    #         "\tOr...\r\n" +
+    #         "Use this script's customized options?\r\n" +
+    #         "   (see lines 836-880 in the script code for options & values)" +
+    #         "\r\n" +
+    #         "__________________________________________________\r\n" +
+    #         "\r\n" +
+    #         "Yes:\tUse \"Default\" Session options.\r\n" +
+    #         "No:\tUse custom options defined in this script." +
+    #         "\r\n" +
+    #         "Cancel:\tExit script; let me read/modify the " +
+    #         "code before I decide.",
+    #     "Use \"Default\" Session options for imported sessions?",
+    #     3)
+    # if nReturn == 6:      # Yes:
+    #     g_bUseDefaultSessionOptions = True
+    # elif nReturn == 7:    # No:
+    #     g_bUseDefaultSessionOptions = False
+    # elif nReturn == 2:    # Cancel:
         return
+    g_bUseDefaultSessionOptions = True
 
     nStartTime = time.time()
     bFoundHeader = False
@@ -825,10 +826,10 @@ def Import():
 
                     if not ValidateSessionFolderComponent(strFolderOrig, "folder"):
                         bSaveSession = False
-                        
+
                     if not ValidateProtocolComponent(strProtocol):
                         bSaveSession = False
-                        
+
                     if bSaveSession:
                         # Canonicalize the path to the session, as needed
                         strSessionPath = strSessionName
@@ -861,7 +862,7 @@ def Import():
                         # a telnet configuration will not be allowed to set any port forwarding
                         # settings since port forwarding settings are specific to SSH.
                         objConfig = crt.OpenSessionConfiguration("Default")
-                            
+
                         objConfig.SetOption("Protocol Name", strProtocol)
 
                         # We opened a default session & changed the protocol, now we save the
@@ -932,7 +933,7 @@ def Import():
                                 # of value in Default session, comment out the following line)
                                 # ---------------------------------------------------------------------------
                                 objConfig.SetOption("ANSI Color", True)
-                                objConfig.SetOption("Color Scheme", "Solarized Darcula") # Requires 8.3 or newer
+                                objConfig.SetOption("Color Scheme", "Dark Pastel") # Requires 8.3 or newer
                                 objConfig.SetOption("Color Scheme Overrides Ansi Color", True)
 
                                 # Additional "SetOption" calls desired here... Comment out those you don't
@@ -941,7 +942,7 @@ def Import():
                                 # operation. Note: ${VDS_USER_DATA_PATH} = a cross-platform representation
                                 #                  of the current user's "Documents" folder.
                                 # ---------------------------------------------------------------------------
-                                objConfig.SetOption("Auto Reconnect", True)
+                                objConfig.SetOption("Auto Reconnect", False)
 
                                 # If you desire templated log file naming to be enabled
                                 # for all imported sessions, uncommment the following 3
@@ -951,28 +952,32 @@ def Import():
                                 #     objConfig.SetOption("Log Filename V2", "${VDS_USER_DATA_PATH}\_ScrtLog(%S)_%Y%M%D_%h%m%s.%t.txt")
 
                                 objConfig.SetOption("Start Log Upon Connect", False)
-                                objConfig.SetOption("Rows", 60)
-                                objConfig.SetOption("Cols", 140)
+                                objConfig.SetOption("Rows", 80)
+                                objConfig.SetOption("Cols", 256)
                                 objConfig.SetOption("Use Word Delimiter Chars", True)
-                                if str(objConfig.GetOption("Word Delimiter Chars")) == "":
-                                    objConfig.SetOption("Word Delimiter Chars", " <>()+=$%!#*")
+                                #if str(objConfig.GetOption("Word Delimiter Chars")) == "":
+                                #    objConfig.SetOption("Word Delimiter Chars", " <>()+=$%!#*")
 
-                                if int(objConfig.GetOption("Scrollback")) == 500:
-                                    objConfig.SetOption("Scrollback", 12345)
-
-                                objConfig.SetOption("Key Exchange Algorithms", "diffie-hellman-group-exchange-sha256,ecdh-sha2-nistp256,ecdh-sha2-nistp384,ecdh-sha2-nistp521,diffie-hellman-group-exchange-sha1,diffie-hellman-group14-sha1,diffie-hellman-group1-sha1")
+                                objConfig.SetOption("Word Delimiter Chars", "")
+                                objConfig.SetOption("Scrollback", 50000)
+                                objConfig.SetOption("Key Exchange Algorithms", "curve25519-sha256,ecdh-sha2-nistp521,ecdh-sha2-nistp384,ecdh-sha2-nistp256,diffie-hellman-group18-sha512,diffie-hellman-group16-sha512,diffie-hellman-group14-sha256,diffie-hellman-group-exchange-sha256,diffie-hellman-group-exchange-sha1,diffie-hellman-group14-sha1,gss-group1-sha1-toWM5Slw5Ew8Mqkay+al2g==,gss-gex-sha1-toWM5Slw5Ew8Mqkay+al2g==,gss-group1-sha1-m1xNP3rRAc6JVrs+BUdo5Q==,gss-gex-sha1-m1xNP3rRAc6JVrs+BUdo5Q==,gss-group1-sha1-6Em1viOOK9MUfdI34X8izQ==,gss-gex-sha1-6Em1viOOK9MUfdI34X8izQ==,gss-group1-sha1-4s+AAtlALj0s3Z3xGjNXPQ==,gss-gex-sha1-4s+AAtlALj0s3Z3xGjNXPQ==,gss-group1-sha1-B5Sl0rEWNJyWTODd+gPcDg==,gss-gex-sha1-B5Sl0rEWNJyWTODd+gPcDg==,gss-group1-sha1-eipGX3TCiQSrx573bT1o1Q==,gss-gex-sha1-eipGX3TCiQSrx573bT1o1Q==")
                                 objConfig.SetOption("Idle NO-OP Check", True)
-                                objConfig.SetOption("Idle NO-OP Timeout", 60)
+                                objConfig.SetOption("Idle NO-OP Timeout", 15)
 
                                 # objConfig.SetOption("Keyword Set", "MyCiscoKeywords")
                                 # objConfig.SetOption("Highlight Color", True)
                                 # objConfig.SetOption("Highlight Reverse Video", True)
                                 # objConfig.SetOption("Ignore Window Title Change Requests", True)
-                                # objConfig.SetOption("SSH2 Authentications V2", "publickey,keyboard-interactive,password")
+                                objConfig.SetOption("SSH2 Authentications V2", "publickey")
                                 # objConfig.SetOption("Identity Filename V2", "${VDS_USER_DATA_PATH}\Identity")
                                 # objConfig.SetOption("Firewall Name", "Session:JumpHost")
                                 # objConfig.SetOption("Firewall Name", "GlobalOptionDefinedFirewallName")
                                 objConfig.SetOption("Auth Prompts in Window", True)
+                                objConfig.SetOption("Cursor Style", "Block")
+
+                                objConfig.setOption("Use Global Public Key",True)
+
+
                         except Exception as objInst:
                             MsgBox("failure detected:\n\t{0}".format(str(objInst)))
 
