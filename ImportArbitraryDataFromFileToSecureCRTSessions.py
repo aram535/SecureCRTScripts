@@ -170,6 +170,7 @@
 #  description: The comment/description. Multiple lines are separated with '\r'
 # logon_script: Full path to Logon Script filename for session. Not for RDP.
 #       domain: Valid only for RDP sessions.
+#     firewall: Jumphost session
 # =============================================================================
 #
 #
@@ -238,7 +239,7 @@ g_strDelimiter = ","      # comma
 # session configuration.
 global g_strSupportedFields
 g_strSupportedFields = \
-    "description,emulation,folder,hostname,port,protocol,session_name,username,logon_script,domain"
+    "description,emulation,folder,hostname,port,protocol,session_name,username,logon_script,domain,fw"
 
 # If you wish to overwrite existing sessions, set the
 # g_bOverwriteExistingSessions to True; for this example script, we're playing
@@ -272,7 +273,7 @@ g_strExampleHostsFile = g_strExampleHostsFile.replace(",", g_strDelimiter)
 global g_strConfigFolder, strFieldDesignations, g_vFieldsArray, vSessionInfo
 
 global strSessionName, strHostName, strPort
-global strUserName, strProtocol, strEmulation, strDomain
+global strUserName, strProtocol, strEmulation, strDomain, strFw
 global strPathForSessions, g_strLine, nFieldIndex
 global strSessionFileName, strFolder, nDescriptionLineCount, strDescription
 
@@ -738,6 +739,9 @@ def Import():
                         elif "username" in strFieldLabel:
                             strUserName = vSessionInfo[nFieldIndex].strip()
 
+                        elif "fw" in strFieldLabel:
+                            strFw = vSessionInfo[nFieldIndex].strip()
+
                         elif "emulation" in strFieldLabel:
                             strEmulation = vSessionInfo[nFieldIndex].lower().strip()
                             if strEmulation == "xterm":
@@ -887,6 +891,9 @@ def Import():
                             else:
                                 MsgBox("Error: Logon Script is not supported for RDP sessions.")
                                 return
+
+                        if strFw != "":
+                            objConfig.SetOption("Firewall Name", "Session:{}".format(strFw))
 
                         if strEmulation != "":
                             if not "rdp" in strProtocol.lower():
